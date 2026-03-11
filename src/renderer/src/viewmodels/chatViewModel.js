@@ -25,6 +25,10 @@ export function useChatViewModel() {
   let mediaRecorder = null
   let audioChunks = []
   let mediaStream = null
+  const isSystemRecording = ref(false)
+  let systemRecorder = null
+  let systemChunks = []
+  let systemStream = null
 
   watch(selectedModel, () => {
     isModelLoaded.value = loadedModelName.value === selectedModel.value.name
@@ -257,6 +261,70 @@ ${text}
     mediaRecorder.stop()
   }
 
+ async function startSystemAudio() {
+  if (isSystemRecording.value) return
+
+  try {
+    systemStream = await navigator.mediaDevices.getDisplayMedia({
+      audio: true,
+      video: true
+    })
+
+    const audioTracks = systemStream.getAudioTracks()
+
+    if (!audioTracks.length) {
+      console.error("No system audio available")
+      return
+    }
+
+    const audioStream = new MediaStream(audioTracks)
+
+    systemRecorder = new MediaRecorder(audioStream)
+
+    systemChunks = []
+
+    systemRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) systemChunks.push(e.data)
+    }
+
+    systemRecorder.onstop = async () => {
+      const blob = new Blob(systemChunks, { type: "audio/webm" })
+
+      const buffer = await blob.arrayBuffer()
+
+      const audioCtx = new AudioContext()
+      const audioBuffer = await audioCtx.decodeAudioData(buffer)
+
+      const result = await repository.generate([
+        "<start_of_turn>user\n",
+        "Transcribe the spoken audio exactly.\n",
+        { audioSource: audioBuffer },
+        "\n<end_of_turn>\n<start_of_turn>model\n"
+      ])
+
+      chatInput.value = result.response.trim()
+
+     
+
+      systemStream.getTracks().forEach((t) => t.stop())
+    }
+
+    systemRecorder.start()
+
+    isSystemRecording.value = true
+  } catch (err) {
+    console.error("System audio error:", err)
+  }
+}
+
+function stopSystemAudio() {
+  if (!systemRecorder) return
+
+  systemRecorder.stop()
+
+  isSystemRecording.value = false
+}
+
   return {
     models,
     selectedModel,
@@ -283,6 +351,9 @@ ${text}
     loadedModelName,
     isRecording,
     startRecording,
-    stopRecording
+    stopRecording,
+    isSystemRecording,
+    startSystemAudio,
+    stopSystemAudio,
   }
 }

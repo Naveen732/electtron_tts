@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, Menu } from 'electron'
+import { app, BrowserWindow, protocol, session, desktopCapturer } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { join } from 'path'
@@ -34,7 +34,7 @@ function createWindow() {
     }
   })
 
-  Menu.setApplicationMenu(null)
+  // Menu.setApplicationMenu(null)
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
@@ -47,6 +47,21 @@ if (process.platform === 'darwin') {
 }
 
 app.whenReady().then(() => {
+
+  session.defaultSession.setDisplayMediaRequestHandler(
+    async (request, callback) => {
+      const sources = await desktopCapturer.getSources({
+        types: ["screen"]
+      })
+
+      callback({
+        video: sources[0],
+        audio: "loopback"
+      })
+    },
+    { useSystemPicker: true }
+  )
+
   protocol.handle('app', async (request) => {
     try {
       const url = new URL(request.url)

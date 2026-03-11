@@ -18,14 +18,15 @@ export class LlmRepository {
       baseOptions: { modelAssetPath: modelPath, delegate: 'gpu' },
       maxTokens: 4096,
       supportAudio: true,
-      maxNumImages: 5
+      maxNumImages: 5,
+      
     })
-
     const end = performance.now()
 
     const loadTime = (end - start).toFixed(2)
 
     return { loadTime }
+    
   }
 
   async generate(prompt) {
@@ -34,8 +35,20 @@ export class LlmRepository {
     }
 
     const start = performance.now()
+    let response
 
-    const response = await this.llm.generateResponse(prompt)
+    if (typeof prompt === "string") {
+    response = await this.llm.generateResponse(prompt)
+  }
+
+  // handle multimodal prompt
+  else if (Array.isArray(prompt)) {
+    response = await this.llm.generateResponse(prompt)
+  }
+
+  else {
+    throw new Error("Invalid prompt format")
+  }
 
     const end = performance.now()
 
@@ -46,6 +59,7 @@ export class LlmRepository {
       inferenceTime
     }
   }
+  
 
   async dispose() {
     if (!this.llm) return

@@ -14,7 +14,8 @@ export default {
     'inferences',
     'isRecording',
     'isInferencing',
-    'isWarmingUp'
+    'isWarmingUp',
+    'isSystemRecording'
   ],
 
   emits: [
@@ -26,7 +27,9 @@ export default {
     'startRecording',
     'stopRecording',
     'clearAll',
-    'updatePrompt'
+    'updatePrompt',
+    'startSystemAudio',
+    'stopSystemAudio'
   ],
 
   data() {
@@ -47,7 +50,16 @@ export default {
           })
         })
       }
-    }
+    },
+    chatInput() {
+    this.$nextTick(() => {
+      const el = this.$refs.chatInputBox
+      if (!el) return
+
+      el.style.height = 'auto'
+      el.style.height = el.scrollHeight + 'px'
+    })
+  }
   },
 
   computed: {
@@ -65,15 +77,18 @@ export default {
   },
 
   methods: {
-    handleInput(e) {
-      this.$emit('update:chatInput', e.target.value)
+   handleInput(e) {
+  const value = e.target.value
+  this.$emit('update:chatInput', value)
 
-      this.$nextTick(() => {
-        const el = this.$refs.chatInputBox
-        el.style.height = 'auto'
-        el.style.height = el.scrollHeight + 'px'
-      })
-    },
+  this.$nextTick(() => {
+    const el = this.$refs.chatInputBox
+    if (!el) return
+
+    el.style.height = 'auto'
+    el.style.height = el.scrollHeight + 'px'
+  })
+},
 
     openPromptEditor(prompt) {
       this.editingPrompt = prompt
@@ -253,7 +268,37 @@ export default {
               {{ isRecording ? 'Stop recording' : 'Use voice' }}
             </span>
           </button>
+          <button
+            @click="$emit(isSystemRecording ? 'stopSystemAudio' : 'startSystemAudio')"
+            :disabled="!isChatEnabled"
+            class="relative group flex items-center justify-center w-12 h-12 rounded-full bg-white shadow-md hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            :class="isSystemRecording ? 'ring-4 ring-green-300' : ''"
+          >
+            <!-- IDLE SPEAKER ICON -->
+            <svg
+              v-if="!isSystemRecording"
+              xmlns="http://www.w3.org/2000/svg"
+              class="w-5 h-5 text-gray-700"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M3 10v4h4l5 5V5L7 10H3z" />
+            </svg>
 
+            <!-- ANIMATED AUDIO BARS -->
+            <div v-else class="flex items-end gap-[3px] h-5">
+              <span class="w-[3px] h-full bg-green-600 rounded animate-bounce"></span>
+              <span class="w-[3px] h-full bg-green-600 rounded animate-bounce delay-150"></span>
+              <span class="w-[3px] h-full bg-green-600 rounded animate-bounce delay-300"></span>
+            </div>
+
+            <!-- TOOLTIP -->
+            <span
+              class="absolute -top-9 scale-0 group-hover:scale-100 bg-black text-white text-xs px-2 py-1 rounded transition origin-bottom whitespace-nowrap"
+            >
+              {{ isSystemRecording ? 'Stop system audio' : 'Capture system audio' }}
+            </span>
+          </button>
           <button
             @click="$emit('send')"
             :disabled="!isChatEnabled || isInferencing || isWarmingUp"

@@ -44,5 +44,8 @@ export default defineComponent({
     @startRecording="startRecording"
     @stopRecording="stopRecording"
     @clearAll="clearAll"
+    :isSystemRecording="isSystemRecording"
+    @startSystemAudio="startSystemAudio"
+    @stopSystemAudio="stopSystemAudio"
   />
 </template>
