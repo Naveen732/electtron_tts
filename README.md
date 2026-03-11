@@ -86,3 +86,4 @@ npm run build:linux
 
 - Microphone permission is required for Speech-to-Text
 - Do not commit the `.env` file
+"# electron_system_audio_transcribe" 
