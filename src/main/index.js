@@ -47,16 +47,15 @@ if (process.platform === 'darwin') {
 }
 
 app.whenReady().then(() => {
-
   session.defaultSession.setDisplayMediaRequestHandler(
     async (request, callback) => {
       const sources = await desktopCapturer.getSources({
-        types: ["screen"]
+        types: ['screen']
       })
 
       callback({
         video: sources[0],
-        audio: "loopback"
+        audio: 'loopback'
       })
     },
     { useSystemPicker: true }

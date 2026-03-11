@@ -52,14 +52,14 @@ export default {
       }
     },
     chatInput() {
-    this.$nextTick(() => {
-      const el = this.$refs.chatInputBox
-      if (!el) return
+      this.$nextTick(() => {
+        const el = this.$refs.chatInputBox
+        if (!el) return
 
-      el.style.height = 'auto'
-      el.style.height = el.scrollHeight + 'px'
-    })
-  }
+        el.style.height = 'auto'
+        el.style.height = el.scrollHeight + 'px'
+      })
+    }
   },
 
   computed: {
@@ -77,18 +77,18 @@ export default {
   },
 
   methods: {
-   handleInput(e) {
-  const value = e.target.value
-  this.$emit('update:chatInput', value)
+    handleInput(e) {
+      const value = e.target.value
+      this.$emit('update:chatInput', value)
 
-  this.$nextTick(() => {
-    const el = this.$refs.chatInputBox
-    if (!el) return
+      this.$nextTick(() => {
+        const el = this.$refs.chatInputBox
+        if (!el) return
 
-    el.style.height = 'auto'
-    el.style.height = el.scrollHeight + 'px'
-  })
-},
+        el.style.height = 'auto'
+        el.style.height = el.scrollHeight + 'px'
+      })
+    },
 
     openPromptEditor(prompt) {
       this.editingPrompt = prompt
@@ -120,13 +120,13 @@ export default {
 
         <select
           :value="selectedModel?.name"
+          class="w-full border rounded-lg px-3 py-2 text-sm"
           @change="
             $emit(
               'update:selectedModel',
               models.find((m) => m.name === $event.target.value)
             )
           "
-          class="w-full border rounded-lg px-3 py-2 text-sm"
         >
           <option v-for="m in models" :key="m.name" :value="m.name">
             {{ m.name }}
@@ -134,8 +134,8 @@ export default {
         </select>
 
         <button
-          @click="$emit('loadModel')"
           :disabled="isLoadingModel || isCurrentModelLoaded"
+          @click="$emit('loadModel')"
           class="w-full py-2 rounded-lg text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
           :class="isCurrentModelLoaded ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'"
         >
@@ -162,8 +162,8 @@ export default {
         <div v-for="p in prompts" :key="p.label" class="flex items-center gap-2 mb-2">
           <!-- SELECT -->
           <button
-            @click="$emit('update:selectedPrompt', p)"
             :disabled="!isPromptEnabled"
+            @click="$emit('update:selectedPrompt', p)"
             class="flex-1 text-left px-3 py-2 rounded-lg text-sm"
             :class="selectedPrompt?.label === p.label ? 'bg-blue-600 text-white' : 'bg-gray-100'"
           >
@@ -172,8 +172,8 @@ export default {
 
           <!-- EDIT -->
           <button
-            @click="openPromptEditor(p)"
             :disabled="!isPromptEnabled"
+            @click="openPromptEditor(p)"
             class="px-2 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
           >
             ✏
@@ -182,7 +182,7 @@ export default {
       </div>
 
       <div class="p-4">
-        <button @click="$emit('clearAll')" class="w-full bg-red-500 text-white py-2 rounded-lg">
+        <button class="w-full bg-red-500 text-white py-2 rounded-lg" @click="$emit('clearAll')">
           Remove All
         </button>
       </div>
@@ -230,15 +230,15 @@ export default {
             :value="chatInput"
             @input="handleInput"
             @keydown.enter.exact.prevent="$emit('send')"
-            @keydown.shift.enter.stop
             :disabled="!isChatEnabled"
+            @keydown.shift.enter.stop
             placeholder="Type your prompt here..."
             class="flex-1 resize-none overflow-y-auto max-h-40 focus:outline-none"
           />
 
           <button
-            @click="$emit(isRecording ? 'stopRecording' : 'startRecording')"
             :disabled="!isChatEnabled"
+            @click="$emit(isRecording ? 'stopRecording' : 'startRecording')"
             class="relative group flex items-center justify-center w-12 h-12 rounded-full bg-white shadow-md hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
             :class="isRecording ? 'ring-4 ring-blue-300' : ''"
           >
@@ -269,8 +269,8 @@ export default {
             </span>
           </button>
           <button
-            @click="$emit(isSystemRecording ? 'stopSystemAudio' : 'startSystemAudio')"
             :disabled="!isChatEnabled"
+            @click="$emit(isSystemRecording ? 'stopSystemAudio' : 'startSystemAudio')"
             class="relative group flex items-center justify-center w-12 h-12 rounded-full bg-white shadow-md hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
             :class="isSystemRecording ? 'ring-4 ring-green-300' : ''"
           >
@@ -300,8 +300,8 @@ export default {
             </span>
           </button>
           <button
-            @click="$emit('send')"
             :disabled="!isChatEnabled || isInferencing || isWarmingUp"
+            @click="$emit('send')"
             class="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-40"
           >
             Send
@@ -325,11 +325,11 @@ export default {
         />
 
         <div class="flex justify-end gap-2">
-          <button @click="showPromptEditor = false" class="px-4 py-2 bg-gray-200 rounded-lg">
+          <button class="px-4 py-2 bg-gray-200 rounded-lg" @click="showPromptEditor = false">
             Cancel
           </button>
 
-          <button @click="savePrompt" class="px-4 py-2 bg-blue-600 text-white rounded-lg">
+          <button class="px-4 py-2 bg-blue-600 text-white rounded-lg" @click="savePrompt">
             Save
           </button>
         </div>
