@@ -26,9 +26,9 @@ export function useChatViewModel() {
   let audioChunks = []
   let mediaStream = null
   const isSystemRecording = ref(false)
-  let systemRecorder = null
-  let systemChunks = []
-  let systemStream = null
+  let audioCtx
+  let processor
+  let systemStream
 
   watch(selectedModel, () => {
     isModelLoaded.value = loadedModelName.value === selectedModel.value.name
@@ -264,36 +264,50 @@ ${text}
   async function startSystemAudio() {
     if (isSystemRecording.value) return
 
-    try {
-      systemStream = await navigator.mediaDevices.getDisplayMedia({
-        audio: true,
-        video: true
-      })
+    systemStream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: true
+    })
 
-      const audioTracks = systemStream.getAudioTracks()
+    const audioTracks = systemStream.getAudioTracks()
 
-      if (!audioTracks.length) {
-        console.error('No system audio available')
-        return
-      }
+    if (!audioTracks.length) {
+      console.error('No system audio track')
+      return
+    }
 
-      const audioStream = new MediaStream(audioTracks)
+    audioCtx = new AudioContext()
 
-      systemRecorder = new MediaRecorder(audioStream)
+    const source = audioCtx.createMediaStreamSource(new MediaStream(audioTracks))
 
-      systemChunks = []
+    processor = audioCtx.createScriptProcessor(4096, 1, 1)
 
-      systemRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) systemChunks.push(e.data)
-      }
+    source.connect(processor)
+    processor.connect(audioCtx.destination)
 
-      systemRecorder.onstop = async () => {
-        const blob = new Blob(systemChunks, { type: 'audio/webm' })
+    let pcmBuffer = []
 
-        const buffer = await blob.arrayBuffer()
+    processor.onaudioprocess = async (event) => {
+      const input = event.inputBuffer.getChannelData(0)
 
-        const audioCtx = new AudioContext()
-        const audioBuffer = await audioCtx.decodeAudioData(buffer)
+      pcmBuffer.push(new Float32Array(input))
+
+      const duration = (pcmBuffer.length * 4096) / audioCtx.sampleRate
+
+      if (duration >= 5) {
+        const start = performance.now()
+
+        const merged = new Float32Array(pcmBuffer.length * 4096)
+
+        pcmBuffer.forEach((chunk, i) => {
+          merged.set(chunk, i * 4096)
+        })
+
+        pcmBuffer = []
+
+        const audioBuffer = audioCtx.createBuffer(1, merged.length, audioCtx.sampleRate)
+
+        audioBuffer.copyToChannel(merged, 0)
 
         const result = await repository.generate([
           '<start_of_turn>user\n',
@@ -302,27 +316,29 @@ ${text}
           '\n<end_of_turn>\n<start_of_turn>model\n'
         ])
 
-        chatInput.value = result.response.trim()
+        const transcriptionTime = Math.round(performance.now() - start)
 
-        systemStream.getTracks().forEach((t) => t.stop())
+        const newText = result.response.trim()
+        chatInput.value += (chatInput.value ? ' ' : '') + newText
+
+        console.log('Transcription:', result.response)
+        console.log('Time:', transcriptionTime, 'ms')
       }
-
-      systemRecorder.start()
-
-      isSystemRecording.value = true
-    } catch (err) {
-      console.error('System audio error:', err)
     }
+
+    isSystemRecording.value = true
   }
 
   function stopSystemAudio() {
-    if (!systemRecorder) return
+    if (!audioCtx) return
 
-    systemRecorder.stop()
+    processor.disconnect()
+    audioCtx.close()
+
+    systemStream.getTracks().forEach((t) => t.stop())
 
     isSystemRecording.value = false
   }
-
   return {
     models,
     selectedModel,
