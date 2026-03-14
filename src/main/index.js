@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, session, desktopCapturer, Menu } from 'electron'
+import { app, BrowserWindow, protocol, session, desktopCapturer,Menu } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { join } from 'path'

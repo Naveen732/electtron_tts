@@ -22,13 +22,13 @@ export function useChatViewModel() {
   const isWarmingUp = ref(false)
   const warmupTimeMs = ref(null)
   const isRecording = ref(false)
-  let mediaRecorder = null
-  let audioChunks = []
-  let mediaStream = null
   const isSystemRecording = ref(false)
   let audioCtx
   let processor
   let systemStream
+  let micStream
+  let micAudioCtx
+  let micProcessor
 
   watch(selectedModel, () => {
     isModelLoaded.value = loadedModelName.value === selectedModel.value.name
@@ -212,53 +212,127 @@ ${text}
     if (!isModelLoaded.value) return
 
     try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
 
-      mediaRecorder = new MediaRecorder(mediaStream)
-      audioChunks = []
+      micAudioCtx = new AudioContext()
 
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) audioChunks.push(e.data)
+      const source = micAudioCtx.createMediaStreamSource(micStream)
+
+      micProcessor = micAudioCtx.createScriptProcessor(2048, 1, 1)
+
+      const silent = micAudioCtx.createGain()
+      silent.gain.value = 0
+
+      source.connect(micProcessor)
+      micProcessor.connect(silent)
+      silent.connect(micAudioCtx.destination)
+
+      let pcmBuffer = []
+
+      function resampleTo16k(input, inputRate) {
+        const outputRate = 16000
+        const ratio = inputRate / outputRate
+        const newLength = Math.floor(input.length / ratio)
+
+        const output = new Float32Array(newLength)
+
+        for (let i = 0; i < newLength; i++) {
+          const pos = i * ratio
+          const left = Math.floor(pos)
+          const right = Math.min(left + 1, input.length - 1)
+          const frac = pos - left
+
+          output[i] = input[left] * (1 - frac) + input[right] * frac
+        }
+
+        return output
       }
 
-      mediaRecorder.onstop = async () => {
-        isRecording.value = false
+      micProcessor.onaudioprocess = async (event) => {
+        const input = event.inputBuffer.getChannelData(0)
 
-        const webmBlob = new Blob(audioChunks, { type: 'audio/webm' })
+        pcmBuffer.push(new Float32Array(input))
 
-        const arrayBuffer = await webmBlob.arrayBuffer()
+        const duration = (pcmBuffer.length * 2048) / micAudioCtx.sampleRate
 
-        const audioCtx = new AudioContext()
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+        if (duration >= 2.5) {
+          const start = performance.now()
 
-        isInferencing.value = true
+          const merged = new Float32Array(pcmBuffer.length * 2048)
 
-        const result = await repository.generate([
-          '<start_of_turn>user\n',
-          'Transcribe the spoken words exactly. Output only the text.\n',
-          { audioSource: audioBuffer },
-          '\n<end_of_turn>\n<start_of_turn>model\n'
-        ])
+          pcmBuffer.forEach((chunk, i) => {
+            merged.set(chunk, i * 2048)
+          })
 
-        chatInput.value = result.response.trim()
+          pcmBuffer = []
 
-        await sendMessage()
+          let max = 0
+          for (let i = 0; i < merged.length; i++) {
+            max = Math.max(max, Math.abs(merged[i]))
+          }
 
-        mediaStream.getTracks().forEach((t) => t.stop())
-        isInferencing.value = false
+          if (max > 0) {
+            for (let i = 0; i < merged.length; i++) {
+              merged[i] /= max
+            }
+          }
+
+          let energy = 0
+          for (let i = 0; i < merged.length; i++) {
+            energy += merged[i] * merged[i]
+          }
+
+          const rms = Math.sqrt(energy / merged.length)
+
+          if (rms < 0.01) return
+
+          const resampled = resampleTo16k(merged, micAudioCtx.sampleRate)
+
+          const audioBuffer = micAudioCtx.createBuffer(1, resampled.length, 16000)
+
+          audioBuffer.copyToChannel(resampled, 0)
+
+          try {
+            const result = await repository.generate([
+              '<start_of_turn>user\n',
+              'Transcribe the spoken audio exactly.\n',
+              { audioSource: audioBuffer },
+              '\n<end_of_turn>\n<start_of_turn>model\n'
+            ])
+
+            const newText = result.response.trim()
+
+            if (!newText || newText.toLowerCase() === 'okay.') {
+              return
+            }
+
+            chatInput.value += (chatInput.value ? ' ' : '') + newText
+
+            const transcriptionTime = Math.round(performance.now() - start)
+
+            console.log('Mic Transcription:', newText)
+            console.log('Time:', transcriptionTime, 'ms')
+          } catch (err) {
+            console.error('Mic transcription error:', err)
+          }
+        }
       }
 
-      mediaRecorder.start()
       isRecording.value = true
     } catch (err) {
       console.error('Mic error:', err)
       isRecording.value = false
     }
   }
-
   function stopRecording() {
-    if (!mediaRecorder) return
-    mediaRecorder.stop()
+    if (!micAudioCtx) return
+
+    micProcessor.disconnect()
+    micAudioCtx.close()
+
+    micStream.getTracks().forEach((t) => t.stop())
+
+    isRecording.value = false
   }
 
   async function startSystemAudio() {

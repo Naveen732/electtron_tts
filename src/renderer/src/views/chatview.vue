@@ -39,6 +39,20 @@ export default {
       editablePromptText: ''
     }
   },
+
+  computed: {
+    isCurrentModelLoaded() {
+      return this.isModelLoaded && this.selectedModel?.name === this.loadedModelName
+    },
+
+    isPromptEnabled() {
+      return this.isCurrentModelLoaded && !this.isLoadingModel && !this.isWarmingUp
+    },
+
+    isChatEnabled() {
+      return this.isCurrentModelLoaded && this.selectedPrompt
+    }
+  },
   watch: {
     isInferencing(val) {
       if (!val) {
@@ -59,20 +73,6 @@ export default {
         el.style.height = 'auto'
         el.style.height = el.scrollHeight + 'px'
       })
-    }
-  },
-
-  computed: {
-    isCurrentModelLoaded() {
-      return this.isModelLoaded && this.selectedModel?.name === this.loadedModelName
-    },
-
-    isPromptEnabled() {
-      return this.isCurrentModelLoaded && !this.isLoadingModel && !this.isWarmingUp
-    },
-
-    isChatEnabled() {
-      return this.isCurrentModelLoaded && this.selectedPrompt
     }
   },
 
@@ -135,9 +135,9 @@ export default {
 
         <button
           :disabled="isLoadingModel || isCurrentModelLoaded"
-          @click="$emit('loadModel')"
           class="w-full py-2 rounded-lg text-white transition disabled:opacity-50 disabled:cursor-not-allowed"
           :class="isCurrentModelLoaded ? 'bg-green-600' : 'bg-blue-600 hover:bg-blue-700'"
+          @click="$emit('loadModel')"
         >
           <span v-if="isLoadingModel"> Loading {{ modelLoadProgress }}% </span>
 
@@ -163,9 +163,9 @@ export default {
           <!-- SELECT -->
           <button
             :disabled="!isPromptEnabled"
-            @click="$emit('update:selectedPrompt', p)"
             class="flex-1 text-left px-3 py-2 rounded-lg text-sm"
             :class="selectedPrompt?.label === p.label ? 'bg-blue-600 text-white' : 'bg-gray-100'"
+            @click="$emit('update:selectedPrompt', p)"
           >
             {{ p.label }}
           </button>
@@ -173,8 +173,8 @@ export default {
           <!-- EDIT -->
           <button
             :disabled="!isPromptEnabled"
-            @click="openPromptEditor(p)"
             class="px-2 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+            @click="openPromptEditor(p)"
           >
             ✏
           </button>
@@ -228,19 +228,19 @@ export default {
             ref="chatInputBox"
             rows="1"
             :value="chatInput"
-            @input="handleInput"
-            @keydown.enter.exact.prevent="$emit('send')"
             :disabled="!isChatEnabled"
-            @keydown.shift.enter.stop
             placeholder="Type your prompt here..."
             class="flex-1 resize-none overflow-y-auto max-h-40 focus:outline-none"
+            @input="handleInput"
+            @keydown.enter.exact.prevent="$emit('send')"
+            @keydown.shift.enter.stop
           />
 
           <button
             :disabled="!isChatEnabled"
-            @click="$emit(isRecording ? 'stopRecording' : 'startRecording')"
             class="relative group flex items-center justify-center w-12 h-12 rounded-full bg-white shadow-md hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
             :class="isRecording ? 'ring-4 ring-blue-300' : ''"
+            @click="$emit(isRecording ? 'stopRecording' : 'startRecording')"
           >
             <!-- IDLE ICON -->
             <svg
@@ -270,9 +270,9 @@ export default {
           </button>
           <button
             :disabled="!isChatEnabled"
-            @click="$emit(isSystemRecording ? 'stopSystemAudio' : 'startSystemAudio')"
             class="relative group flex items-center justify-center w-12 h-12 rounded-full bg-white shadow-md hover:bg-gray-100 transition disabled:opacity-40 disabled:cursor-not-allowed"
             :class="isSystemRecording ? 'ring-4 ring-green-300' : ''"
+            @click="$emit(isSystemRecording ? 'stopSystemAudio' : 'startSystemAudio')"
           >
             <!-- IDLE SPEAKER ICON -->
             <svg
@@ -301,8 +301,8 @@ export default {
           </button>
           <button
             :disabled="!isChatEnabled || isInferencing || isWarmingUp"
-            @click="$emit('send')"
             class="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-40"
+            @click="$emit('send')"
           >
             Send
           </button>

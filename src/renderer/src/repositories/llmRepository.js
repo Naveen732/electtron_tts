@@ -3,6 +3,7 @@ import { FilesetResolver, LlmInference } from '@mediapipe/tasks-genai'
 export class LlmRepository {
   constructor() {
     this.llm = null
+    this.isProcessing = false
   }
 
   wasmPath = window.paths.getWasmUrl()
@@ -18,13 +19,13 @@ export class LlmRepository {
       baseOptions: { modelAssetPath: modelPath, delegate: 'gpu' },
       maxTokens: 4096,
       supportAudio: true,
-      maxNumImages: 5
+      maxNumImages: 5,
+      temperature: 0
     })
+
     const end = performance.now()
 
-    const loadTime = (end - start).toFixed(2)
-
-    return { loadTime }
+    return { loadTime: (end - start).toFixed(2) }
   }
 
   async generate(prompt) {
@@ -32,27 +33,35 @@ export class LlmRepository {
       throw new Error('Model not loaded')
     }
 
-    const start = performance.now()
-    let response
-
-    if (typeof prompt === 'string') {
-      response = await this.llm.generateResponse(prompt)
+ 
+    if (this.isProcessing) {
+      return { response: "", inferenceTime: 0 }
     }
 
-    // handle multimodal prompt
-    else if (Array.isArray(prompt)) {
-      response = await this.llm.generateResponse(prompt)
-    } else {
-      throw new Error('Invalid prompt format')
-    }
+    this.isProcessing = true
 
-    const end = performance.now()
+    try {
+      const start = performance.now()
 
-    const inferenceTime = (end - start).toFixed(2)
+      let response
 
-    return {
-      response,
-      inferenceTime
+      if (typeof prompt === 'string') {
+        response = await this.llm.generateResponse(prompt)
+      } else if (Array.isArray(prompt)) {
+        response = await this.llm.generateResponse(prompt)
+      } else {
+        throw new Error('Invalid prompt format')
+      }
+
+      const end = performance.now()
+
+      return {
+        response,
+        inferenceTime: (end - start).toFixed(2)
+      }
+
+    } finally {
+      this.isProcessing = false
     }
   }
 
