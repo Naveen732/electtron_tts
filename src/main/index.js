@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol, session, desktopCapturer,Menu } from 'electron'
+import { app, BrowserWindow, protocol, session, desktopCapturer } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import { join } from 'path'
@@ -34,7 +34,7 @@ function createWindow() {
     }
   })
 
-  Menu.setApplicationMenu(null)
+  // Menu.setApplicationMenu(null)
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])

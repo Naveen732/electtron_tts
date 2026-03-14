@@ -1,8 +1,10 @@
 import { ref, watch } from 'vue'
 import { LlmRepository } from '../repositories/llmRepository'
+import { TtsRepository } from '../repositories/ttsRepository'
 
 export function useChatViewModel() {
   const repository = new LlmRepository()
+  const tts = new TtsRepository()
 
   const models = ref([
     { name: 'Gemma-3n-E2B', file: 'gemma-3n-E2B-it-int4-Web.litertlm' },
@@ -413,6 +415,14 @@ ${text}
 
     isSystemRecording.value = false
   }
+
+  function sendToMic() {
+    if (!chatInput.value.trim()) return
+
+    const text = chatInput.value
+
+    tts.speak(text)
+  }
   return {
     models,
     selectedModel,
@@ -442,6 +452,7 @@ ${text}
     stopRecording,
     isSystemRecording,
     startSystemAudio,
-    stopSystemAudio
+    stopSystemAudio,
+    sendToMic
   }
 }

@@ -47,5 +47,6 @@ export default defineComponent({
     @clear-all="clearAll"
     @start-system-audio="startSystemAudio"
     @stop-system-audio="stopSystemAudio"
+    @sendToMic="sendToMic"
   />
 </template>

@@ -29,7 +29,8 @@ export default {
     'clearAll',
     'updatePrompt',
     'startSystemAudio',
-    'stopSystemAudio'
+    'stopSystemAudio',
+    'sendToMic'
   ],
 
   data() {
@@ -305,6 +306,13 @@ export default {
             @click="$emit('send')"
           >
             Send
+          </button>
+          <button
+            :disabled="!isChatEnabled || isInferencing || isWarmingUp"
+            class="bg-blue-600 text-white px-4 py-2 rounded-lg disabled:opacity-40"
+            @click="$emit('sendToMic')"
+          >
+            🎤 Send To Mic
           </button>
         </div>
       </footer>
